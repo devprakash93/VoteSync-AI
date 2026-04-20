@@ -76,3 +76,12 @@ Built with a multi-tenant pipeline, allowing concurrent organizations to run com
 ---
 
 **Developed for the next generation of transparent democracy.**
+
+---
+
+## 📜 License & Copyright
+
+**© 2026 Dev Prakash (devprakash93). All Rights Reserved.**
+
+This project is proprietary. No part of this repository may be copied, redistributed, or used for commercial purposes without explicit permission from the author. Use of this code for educational purposes is permitted, but reproduction or publication as your own work is strictly prohibited.
+
