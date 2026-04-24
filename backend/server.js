@@ -10,6 +10,9 @@ const { Server } = require('socket.io');
 const app = express();
 const server = http.createServer(app);
 
+// Necessary for rate limiting to work correctly on Render (behind a proxy)
+app.set('trust proxy', 1);
+
 // ── Allowed Origins ────────────────────────────────────────────────────────
 const allowedOrigins = [
   process.env.FRONTEND_URL || 'http://localhost:5173',
