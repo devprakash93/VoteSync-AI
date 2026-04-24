@@ -86,8 +86,8 @@ if (process.env.NODE_ENV === 'production') {
   // Serve static files from the frontend/dist directory
   app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-  // Handle SPA routing — send index.html for any non-API routes (Express 5 syntax)
-  app.get('/:path*', (req, res) => {
+  // Handle SPA routing — send index.html for any non-API routes (Express 5 wildcard)
+  app.get('/*path', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
   });
 } else {
