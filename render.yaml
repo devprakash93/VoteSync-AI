@@ -2,7 +2,7 @@ services:
   # Backend Web Service
   - type: web
     name: votesync-backend
-    env: node
+    runtime: node
     plan: free
     rootDir: backend
     buildCommand: npm install
@@ -18,14 +18,14 @@ services:
         sync: false # Set in Render Dashboard
       - key: FRONTEND_URL
         fromService:
-          type: static
+          type: web
           name: votesync-frontend
           property: url
 
   # Frontend Static Site
-  - type: static
+  - type: web
     name: votesync-frontend
-    env: static
+    runtime: static
     plan: free
     rootDir: frontend
     buildCommand: npm install && npm run build
