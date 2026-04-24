@@ -7,8 +7,6 @@ services:
     buildCommand: npm run build
     startCommand: npm start
     envVars:
-      - key: NODE_ENV
-        value: production
       - key: MONGO_URI
         sync: false # Set in Render Dashboard
       - key: JWT_SECRET

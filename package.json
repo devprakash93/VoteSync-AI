@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "install-backend": "cd backend && npm install",
-    "install-frontend": "cd frontend && npm install",
+    "install-frontend": "cd frontend && npm install --include=dev",
     "build-frontend": "cd frontend && npm run build",
     "build": "npm run install-backend && npm run install-frontend && npm run build-frontend",
-    "start": "cd backend && node server.js"
+    "start": "cd backend && NODE_ENV=production node server.js"
   }
 }
