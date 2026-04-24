@@ -80,10 +80,22 @@ app.use('/api/geo',      require('./routes/geoRoutes'));
 app.use('/api/profile',  require('./routes/profileRoutes'));
 app.use('/api/admin',    require('./routes/adminRoutes'));
 
-// ── 404 Handler ───────────────────────────────────────────────────────────
-app.use((req, res) => {
-  res.status(404).json({ message: `Route ${req.originalUrl} not found.` });
-});
+// ── Production Frontend Serving ───────────────────────────────────────────
+if (process.env.NODE_ENV === 'production') {
+  const path = require('path');
+  // Serve static files from the frontend/dist directory
+  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+
+  // Handle SPA routing — send index.html for any non-API routes
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+  });
+} else {
+  // ── 404 Handler (Dev only, as prod handles * above) ──────────────────────
+  app.use((req, res) => {
+    res.status(404).json({ message: `Route ${req.originalUrl} not found.` });
+  });
+}
 
 // ── Global Error Handler ──────────────────────────────────────────────────
 // Must have 4 parameters so Express recognises it as an error handler

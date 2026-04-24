@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Single source of truth for all API calls.
 // VITE_API_URL can be set in .env for production deployments.
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Defaults to empty string in production to allow relative path serving.
+const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '' : 'http://localhost:5000');
 
 const api = axios.create({
   baseURL: BASE_URL,

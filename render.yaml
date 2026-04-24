@@ -1,21 +1,15 @@
 services:
-  # Backend Web Service
+  # Unified MERN Web Service
   - type: web
-    name: votesync-backend
-    env: node
+    name: votesync-ai
+    runtime: node
     plan: free
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: node server.js
+    buildCommand: npm run build
+    startCommand: npm start
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: MONGO_URI
-        sync: false
+        sync: false # Set in Render Dashboard
       - key: JWT_SECRET
-        sync: false
-
-  # Frontend Static Site
-  - type: static
-    name: votesync-frontend
-    rootDir: frontend
-    buildCommand: npm install && npm run build
-    staticPublishPath: dist
+        sync: false # Set in Render Dashboard
