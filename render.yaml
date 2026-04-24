@@ -1,13 +1,18 @@
 services:
-  # Unified MERN Web Service
+  # Unified MERN Web Service — serves both API and compiled React frontend
   - type: web
     name: votesync-ai
     runtime: node
     plan: free
+    rootDir: .
     buildCommand: npm run build
     startCommand: npm start
     envVars:
+      - key: NODE_ENV
+        value: production
       - key: MONGO_URI
-        sync: false # Set in Render Dashboard
+        sync: false   # Set this in the Render Dashboard → Environment
       - key: JWT_SECRET
-        sync: false # Set in Render Dashboard
+        sync: false   # Set this in the Render Dashboard → Environment
+      - key: PORT
+        value: 10000  # Render's default PORT; the app reads process.env.PORT
