@@ -28,7 +28,9 @@ const io = new Server(server, {
 const { apiLimiter } = require('./middleware/rateLimiter');
 
 // ── Core Middleware ────────────────────────────────────────────────────────
-app.use(helmet()); // Security headers: XSS, clickjacking, MIME sniffing, etc.
+app.use(helmet({
+  contentSecurityPolicy: false, // CSP blocks Vite's React scripts — disable until nonces are configured
+})); // Security headers: XSS, clickjacking, MIME sniffing, etc.
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests with no origin (e.g. Postman, mobile apps, curl)
@@ -83,12 +85,26 @@ app.use('/api/admin',    require('./routes/adminRoutes'));
 // ── Production Frontend Serving ───────────────────────────────────────────
 if (process.env.NODE_ENV === 'production') {
   const path = require('path');
-  // Serve static files from the frontend/dist directory
-  app.use(express.static(path.join(__dirname, '../frontend/dist')));
+  const fs = require('fs');
 
-  // Handle SPA routing — send index.html for any non-API routes (Express 5 wildcard)
+  // Resolve the dist directory relative to the project root (one level above /backend)
+  const distPath = path.resolve(__dirname, '..', 'frontend', 'dist');
+  const indexPath = path.join(distPath, 'index.html');
+
+  // Log on startup so we can verify the path in Render's logs
+  console.log(`📂 Static dist path: ${distPath}`);
+  console.log(`📄 index.html exists: ${fs.existsSync(indexPath)}`);
+
+  // Serve all compiled assets (JS, CSS, images, fonts, etc.)
+  app.use(express.static(distPath));
+
+  // SPA fallback — serve index.html for any non-API route
   app.get('/*path', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+    // Skip /assets/ — if a file is missing there, return 404 not HTML
+    if (req.path.startsWith('/assets/')) {
+      return res.status(404).json({ message: 'Asset not found' });
+    }
+    res.sendFile(indexPath);
   });
 } else {
   // ── 404 Handler (Dev only, as prod handles * above) ──────────────────────
