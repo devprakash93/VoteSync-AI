@@ -1,0 +1,42 @@
+services:
+  # Backend Web Service
+  - type: web
+    name: votesync-backend
+    env: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: MONGO_URI
+        sync: false # Set in Render Dashboard
+      - key: JWT_SECRET
+        sync: false # Set in Render Dashboard
+      - key: FRONTEND_URL
+        fromService:
+          type: static
+          name: votesync-frontend
+          property: url
+
+  # Frontend Static Site
+  - type: static
+    name: votesync-frontend
+    env: static
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    publishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: votesync-backend
+          property: url
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
