@@ -66,7 +66,7 @@ io.on('connection', (socket) => {
 });
 
 // ── Health Check ──────────────────────────────────────────────────────────
-app.get('/', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Online Voting API is running.' });
 });
 
