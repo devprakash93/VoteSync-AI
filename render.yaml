@@ -2,7 +2,7 @@ services:
   # Backend Web Service
   - type: web
     name: votesync-backend
-    runtime: node
+    env: node
     plan: free
     rootDir: backend
     buildCommand: npm install
@@ -18,10 +18,9 @@ services:
         sync: false
 
   # Frontend Static Site
-  - type: web
+  - type: static
     name: votesync-frontend
-    runtime: static
-    plan: free
+    env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: ./dist
