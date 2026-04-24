@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Building2, MapPin, Plus, Trash2, CheckCircle2, AlertCircle, ChevronDown, Users } from 'lucide-react';
+import { Building2, MapPin, Plus, CheckCircle2, AlertCircle, Users } from 'lucide-react';
+import api from '../services/api';
 
 const GeoManager = () => {
   const { user } = useContext(AuthContext);
@@ -19,24 +19,21 @@ const GeoManager = () => {
     setTimeout(() => setToast({ show: false, message: '', type: '' }), 4000);
   };
 
-  const token = () => localStorage.getItem('token');
-  const headers = () => ({ Authorization: `Bearer ${token()}` });
+
 
   useEffect(() => { fetchConstituencies(); fetchBooths(); }, []);
 
   const fetchConstituencies = async () => {
     try {
-      const { data } = await axios.get('http://localhost:5000/api/geo/constituencies', { headers: headers() });
+      const { data } = await api.get('/api/geo/constituencies');
       setConstituencies(data);
     } catch (e) { console.error(e); }
   };
 
   const fetchBooths = async (constituencyId = '') => {
     try {
-      const url = constituencyId
-        ? `http://localhost:5000/api/geo/booths?constituency=${constituencyId}`
-        : 'http://localhost:5000/api/geo/booths';
-      const { data } = await axios.get(url, { headers: headers() });
+      const url = constituencyId ? `/api/geo/booths?constituency=${constituencyId}` : '/api/geo/booths';
+      const { data } = await api.get(url);
       setBooths(data);
     } catch (e) { console.error(e); }
   };
@@ -44,7 +41,7 @@ const GeoManager = () => {
   const handleCreateConstituency = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/geo/constituencies', newC, { headers: headers() });
+      await api.post('/api/geo/constituencies', newC);
       showToast(`Constituency "${newC.name}" created!`);
       setNewC({ name: '', state: '', district: '', pincode: '' });
       fetchConstituencies();
@@ -54,7 +51,7 @@ const GeoManager = () => {
   const handleCreateBooth = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/geo/booths', newB, { headers: headers() });
+      await api.post('/api/geo/booths', newB);
       showToast(`Booth "${newB.name}" created!`);
       setNewB({ name: '', constituency: '', location: '', maxCapacity: 1000 });
       fetchBooths(selectedConstituency);

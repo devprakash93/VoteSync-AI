@@ -1,50 +1,50 @@
-# Votex — Government-Grade AI-Powered Digital Voting Infrastructure
+# VoteSync AI — Government-Grade AI-Powered Digital Voting Infrastructure
 
-**Votex** is a high-security, scalable, and transparent digital voting platform designed for enterprise and government-level elections. It combines real-world hierarchical governance with cutting-edge AI and cryptographic verification to ensure election integrity.
+**VoteSync AI** is a high-security, scalable, and transparent digital voting platform designed for enterprise and government-level elections. It combines real-world hierarchical governance with cutting-edge AI and cryptographic verification to ensure election integrity.
+
+---
+
+## ✨ Key Enhancements
+
+### 1. 🏁 Post-Election Results Module
+- **Immutable Snapshots:** Results are frozen into a `finalResultsSnapshot` upon election completion, preventing recalculation tampering.
+- **Dedicated Results Page:** View winners, total votes, and turnout with interactive **Recharts** (Bar + Pie charts).
+- **Public Transparency:** Results are publicly accessible once declared to ensure democratic accountability.
+
+### 2. 🧾 Ballot Confirmation Slips
+- **Official Receipts:** Every voter receives a printable "Ballot Confirmation Slip" styled after official ECI documents.
+- **Cryptographic Tokens:** Includes a unique SHA-256 token to verify participation at `/verify`.
+- **Secret Ballot Protection:** The slip intentionally excludes candidate choice to maintain voter privacy.
+
+### 3. 👤 Voter Profile Dashboard
+- **Personalized Data:** Voters can view their registered constituency, district, and assigned polling booth.
+- **Participation History:** A complete, searchable history of elections the user has participated in.
+- **Election Status:** Real-time visibility into Active, Upcoming, and Completed elections.
+
+### 4. 🛡️ Privacy-Preserving Admin Registry
+- **Turnout Tracking:** Admins can view a full registry of voters who have participated (Voter ID, Name, Timestamp).
+- **Cryptographic Separation:** Uses a separate `VoterActivity` collection to ensure that identity and vote choice are never linked in the database.
+- **Audit Logging:** Every admin access to participation data is recorded in an immutable audit log.
 
 ---
 
 ## 🏛️ System Architecture
 
-### 1. Hierarchical Governance
-Unlike generic voting apps, Votex is built on a realistic geographical hierarchy:
-- **Country → State → District → Constituency → Polling Booth**
-- **Constituency Locking**: Voters are mathematically bound to their constituency. A voter in Mumbai cannot view or participate in elections belonging to Delhi.
-- **Booth Auto-Assignment**: Patented load-balancing algorithm assigns voters to the nearest polling center based on real-time capacity logs.
-
-### 2. AI Intelligence Engine
-The system moves from "descriptive" to "predictive" intelligence:
-- **Heuristic Fraud Detection**: Sigmoid regression monitors vote-burst velocity and device-fingerprint anomalies to flag potential fraud with 95% accuracy.
-- **Winner Prediction**: Time-series extrapolation provides live confidence intervals for candidate performance based on historical turnout.
-- **Participation Insights**: AI summaries detect swings in participation across districts and states in real-time.
-
-### 3. Cryptographic Transparency
-- **Verifiable Receipts**: Every voter receives a unique, non-reversible SHA-256 receipt token.
-- **Vote Hashing**: Secret ballots are enforced using Zero-Knowledge proofs; voter IDs are hashed against a private secret, ensuring the system knows *if* you voted, but never *for whom*.
-
-### 4. Zero-Trust Security
-- **API Rate Limiting**: Intelligent throttling at Auth, Voting, and Admin layers to prevent DDoS and brute-force attacks.
-- **Device Fingerprinting**: Captures IP and User-Agent metadata to prevent multiple identities on a single machine.
-
-### 5. SaaS Multi-Tenancy
-Built with a multi-tenant pipeline, allowing concurrent organizations to run completely isolated elections on the same cloud infrastructure with zero data leakage.
+- **Hierarchical Governance:** Country → State → District → Constituency → Polling Booth.
+- **AI Intelligence Engine:** Predictive winner models, heuristic fraud detection, and participation insights.
+- **Zero-Trust Security:** API rate limiting, device fingerprinting, and JWT-based role isolation.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Frontend**: React.js, Tailwind CSS (Fluid UI), Framer Motion (Animations), Lucide Icons.
-- **Backend**: Node.js, Express, Socket.io (Real-time updates).
-- **Database**: MongoDB (Atlas) with hierarchical Mongoose schema architecture.
-- **Security**: JWT, Bcrypt, express-rate-limit, Crypto-JS.
+- **Frontend**: React.js, Tailwind CSS, Framer Motion, Recharts, Lucide Icons.
+- **Backend**: Node.js, Express, Socket.io (Real-time updates), Mongoose.
+- **Security**: JWT, SHA-256 Hashing, Bcrypt, express-rate-limit.
 
 ---
 
 ## 🚦 Getting Started
-
-### Prerequisites
-- Node.js installed
-- MongoDB Atlas account (or local MongoDB)
 
 ### Installation
 
@@ -53,8 +53,9 @@ Built with a multi-tenant pipeline, allowing concurrent organizations to run com
     ```bash
     cd backend
     npm install
-    touch .env # Add MONGO_URI and JWT_SECRET
-    node seedGov.js # Initialize government data
+    # Create .env with: MONGO_URI, JWT_SECRET, PORT=5000
+    npm run seed          # Initialize core infrastructure
+    npm run demo-voters   # Populate with demo voter data
     npm run dev
     ```
 3.  **Setup Frontend**:
@@ -70,8 +71,22 @@ Built with a multi-tenant pipeline, allowing concurrent organizations to run com
 
 | Role | Email | Password |
 |---|---|---|
-| **Chief Election Officer** | `admin@elections.gov.in` | `password123` |
-| **National Voter** | `voter.a.0@example.com` | `password123` |
+| **Chief Election Officer** | `admin@elections.gov.in` | `Admin@123` |
+| **National Voter** | `voter.a.0@elections.demo` | `Voter@123` |
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions to **VoteSync AI**! To contribute:
+
+1.  **Fork** the repository.
+2.  **Create a Feature Branch** (`git checkout -b feature/AmazingFeature`).
+3.  **Commit Your Changes** (`git commit -m 'Add some AmazingFeature'`).
+4.  **Push to the Branch** (`git push origin feature/AmazingFeature`).
+5.  **Open a Pull Request**.
+
+Please ensure your code follows the existing style and includes proper documentation for new components.
 
 ---
 
@@ -83,5 +98,4 @@ Built with a multi-tenant pipeline, allowing concurrent organizations to run com
 
 **© 2026 Dev Prakash (devprakash93). All Rights Reserved.**
 
-This project is proprietary. No part of this repository may be copied, redistributed, or used for commercial purposes without explicit permission from the author. Use of this code for educational purposes is permitted, but reproduction or publication as your own work is strictly prohibited.
-
+This project is proprietary. No part of this repository may be copied, redistributed, or used for commercial purposes without explicit permission from the author.

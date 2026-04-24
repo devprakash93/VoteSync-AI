@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import axios from 'axios';
 import { ShieldCheck, Search, CheckCircle2, AlertCircle } from 'lucide-react';
+import api from '../services/api';
 
 const VerifyVote = () => {
   const [receiptToken, setReceiptToken] = useState('');
@@ -11,13 +11,13 @@ const VerifyVote = () => {
   const handleVerify = async (e) => {
     e.preventDefault();
     if (!receiptToken.trim()) return;
-    
+
     setLoading(true);
     setError('');
     setVerificationResult(null);
 
     try {
-      const { data } = await axios.get(`http://localhost:5000/api/votes/verify/${receiptToken.trim()}`);
+      const { data } = await api.get(`/api/votes/verify/${receiptToken.trim()}`);
       setVerificationResult(data);
     } catch (err) {
       setError(err.response?.data?.message || 'Verification failed or token invalid');
@@ -40,16 +40,18 @@ const VerifyVote = () => {
 
       <div className="bg-secondary/10 border border-border rounded-xl p-6 shadow-sm">
         <form onSubmit={handleVerify} className="flex gap-3">
-          <input 
-            type="text" 
-            placeholder="Paste your 32-character receipt token..." 
+          <input
+            id="verify-token-input"
+            type="text"
+            placeholder="Paste your 32-character receipt token..."
             value={receiptToken}
             onChange={(e) => setReceiptToken(e.target.value)}
             className="flex-grow p-4 bg-background border border-border rounded-lg outline-none focus:ring-2 focus:ring-primary font-mono text-sm"
             required
           />
-          <button 
-            type="submit" 
+          <button
+            id="verify-submit-btn"
+            type="submit"
             disabled={loading || !receiptToken.trim()}
             className="bg-primary hover:bg-primary/90 text-primary-foreground px-6 font-semibold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50"
           >
@@ -72,9 +74,8 @@ const VerifyVote = () => {
           <div className="relative z-10">
             <div className="flex items-center gap-2 text-green-500 mb-6">
               <CheckCircle2 className="w-6 h-6" />
-              <h3 className="text-xl font-bold tracking-tight">Vote Verified</h3>
+              <h3 className="text-xl font-bold tracking-tight">Vote Verified — Counted in Blockchain Ledger</h3>
             </div>
-            
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <p className="text-xs text-muted-foreground uppercase font-semibold tracking-wider">Election</p>

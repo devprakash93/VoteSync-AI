@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Vote = require('../models/Vote');
 const User = require('../models/User');
 const Constituency = require('../models/Constituency');
@@ -14,13 +15,13 @@ const getTurnoutStats = async (req, res) => {
 
     // Votes grouped by constituency
     const byConstituency = await Vote.aggregate([
-      { $match: { election: new require('mongoose').Types.ObjectId(electionId) } },
+      { $match: { election: new mongoose.Types.ObjectId(electionId) } },
       { $group: { _id: '$constituency', count: { $sum: 1 } } }
     ]);
 
     // Votes grouped by booth
     const byBooth = await Vote.aggregate([
-      { $match: { election: new require('mongoose').Types.ObjectId(electionId) } },
+      { $match: { election: new mongoose.Types.ObjectId(electionId) } },
       { $group: { _id: '$booth', count: { $sum: 1 } } }
     ]);
 

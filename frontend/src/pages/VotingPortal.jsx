@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { AuthContext } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, ChevronRight, Vote, AlertCircle, MapPin, Building2, ShieldCheck, IdCard, Users } from 'lucide-react';
+import { CheckCircle2, ChevronRight, Vote, AlertCircle, MapPin, Building2, ShieldCheck, IdCard, Users, Radio, Printer, Calendar, Clock } from 'lucide-react';
+import { io } from 'socket.io-client';
+import api from '../services/api';
+import { BASE_URL } from '../services/api';
 
 const VotingPortal = () => {
   const { user } = useContext(AuthContext);
@@ -13,21 +15,27 @@ const VotingPortal = () => {
   const [statusMsg, setStatusMsg] = useState({ text: '', type: '' });
   const [loading, setLoading] = useState(true);
   const [receipt, setReceipt] = useState('');
+  const [confirmation, setConfirmation] = useState(null);
   const [boothInfo, setBoothInfo] = useState(null);
+  const [liveCount, setLiveCount] = useState(0);
+  const socketRef = useRef(null);
+  const slipRef = useRef(null);
 
   useEffect(() => {
     fetchElections();
-    if (user?.assignedBooth?._id || user?.assignedBooth) {
-      fetchBoothInfo();
-    }
+    if (user?.assignedBooth) fetchBoothInfo();
+
+    socketRef.current = io(BASE_URL, { transports: ['websocket', 'polling'] });
+    socketRef.current.on('voteCast', () => {
+      setLiveCount(prev => prev + 1);
+      setTimeout(() => setLiveCount(prev => Math.max(0, prev - 1)), 4000);
+    });
+    return () => socketRef.current?.disconnect();
   }, [user]);
 
   const fetchElections = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const { data } = await axios.get('http://localhost:5000/api/elections', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await api.get('/api/elections');
       setElections(data.filter(e => e.status === 'Active'));
     } catch (err) {
       console.error(err);
@@ -38,14 +46,11 @@ const VotingPortal = () => {
 
   const fetchBoothInfo = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const cId = user?.constituency?._id || user?.constituency;
+      if (!cId) return;
+      const { data } = await api.get(`/api/geo/booths?constituency=${cId}`);
       const boothId = user?.assignedBooth?._id || user?.assignedBooth;
-      if (!boothId) return;
-      const { data } = await axios.get(`http://localhost:5000/api/geo/booths?constituency=${user?.constituency?._id || user?.constituency}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const myBooth = data.find(b => b._id === boothId.toString() || b._id === boothId);
-      setBoothInfo(myBooth || null);
+      setBoothInfo(data.find(b => b._id === boothId?.toString()) || null);
     } catch (err) { console.error(err); }
   };
 
@@ -53,10 +58,7 @@ const VotingPortal = () => {
     try {
       setStatusMsg({ text: '', type: '' });
       setReceipt('');
-      const token = localStorage.getItem('token');
-      const { data } = await axios.get(`http://localhost:5000/api/elections/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { data } = await api.get(`/api/elections/${id}`);
       setSelectedElection(data.election);
       setCandidates(data.candidates);
       setSelectedCandidate(null);
@@ -66,16 +68,20 @@ const VotingPortal = () => {
   const handleVote = async () => {
     if (!selectedCandidate) return;
     try {
-      const token = localStorage.getItem('token');
-      const { data } = await axios.post('http://localhost:5000/api/votes',
-        { electionId: selectedElection._id, candidateId: selectedCandidate },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const { data } = await api.post('/api/votes', {
+        electionId: selectedElection._id,
+        candidateId: selectedCandidate,
+      });
       setStatusMsg({ text: 'Vote cast securely!', type: 'success' });
       setReceipt(data.receiptToken);
+      setConfirmation(data.confirmation || null);
     } catch (err) {
       setStatusMsg({ text: err.response?.data?.message || 'Error casting vote', type: 'error' });
     }
+  };
+
+  const handlePrintSlip = () => {
+    window.print();
   };
 
   if (loading) return (
@@ -92,6 +98,21 @@ const VotingPortal = () => {
 
   return (
     <div className="max-w-4xl mx-auto py-8 space-y-6">
+      {/* Live pulse ticker */}
+      <AnimatePresence>
+        {liveCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="fixed top-20 right-4 z-50 flex items-center gap-2 bg-green-500/20 border border-green-500/40 text-green-400 text-xs font-bold px-3 py-2 rounded-full shadow-lg"
+          >
+            <Radio className="w-3 h-3 animate-pulse" />
+            Live vote just cast!
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Voter Identity Card */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -142,20 +163,14 @@ const VotingPortal = () => {
 
       {/* Elections Section */}
       <div>
-        <h1 className="text-2xl font-bold mb-1">Your Constituency Elections</h1>
+        <h1 className="text-2xl font-bold mb-1">Your Eligible Elections</h1>
         <p className="text-muted-foreground text-sm mb-6">
-          Showing elections available for <span className="text-primary font-medium">{constituencyName}</span>
+          Showing active elections for <span className="text-primary font-medium">{constituencyName}</span>
         </p>
 
         <AnimatePresence mode="wait">
           {!selectedElection ? (
-            <motion.div
-              key="elections-list"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="grid gap-4 md:grid-cols-2"
-            >
+            <motion.div key="elections-list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="grid gap-4 md:grid-cols-2">
               {elections.length === 0 ? (
                 <div className="col-span-2 text-center py-16 bg-secondary/10 rounded-xl border border-border">
                   <Vote className="w-12 h-12 mx-auto mb-3 text-muted-foreground opacity-30" />
@@ -163,12 +178,8 @@ const VotingPortal = () => {
                   <p className="text-xs text-muted-foreground mt-1">Check back during election season.</p>
                 </div>
               ) : elections.map((election) => (
-                <motion.div
-                  key={election._id}
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => handleSelectElection(election._id)}
-                  className="p-6 bg-secondary/10 border border-border rounded-xl cursor-pointer hover:bg-secondary/30 hover:border-primary/50 transition-all group"
-                >
+                <motion.div key={election._id} whileHover={{ scale: 1.02 }} onClick={() => handleSelectElection(election._id)}
+                  className="p-6 bg-secondary/10 border border-border rounded-xl cursor-pointer hover:bg-secondary/30 hover:border-primary/50 transition-all group">
                   <div className="flex items-start justify-between mb-3">
                     <span className={`text-xs px-2 py-1 rounded-full border font-medium ${election.type === 'National' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' : election.type === 'State' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : 'bg-primary/20 text-primary border-primary/30'}`}>
                       {election.type}
@@ -186,39 +197,118 @@ const VotingPortal = () => {
               ))}
             </motion.div>
           ) : receipt ? (
-            <motion.div
-              key="receipt-view"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-secondary/10 border border-green-500/30 rounded-xl p-8 text-center space-y-6"
-            >
-              <div className="mx-auto w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center text-green-500">
-                <CheckCircle2 className="w-10 h-10" />
+            <motion.div key="receipt-view" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className="space-y-6">
+              {/* Print styles — only ballot slip prints */}
+              <style>{`@media print { body > * { display: none; } #ballot-slip { display: block !important; } }`}</style>
+
+              <div className="text-center">
+                <div className="mx-auto w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center text-green-500 mb-3">
+                  <CheckCircle2 className="w-8 h-8" />
+                </div>
+                <h2 className="text-2xl font-bold">Ballot Successfully Cast</h2>
+                <p className="text-muted-foreground text-sm mt-1">Your vote has been recorded and cryptographically secured.</p>
               </div>
-              <div>
-                <h2 className="text-2xl font-bold">Ballot Secured</h2>
-                <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-                  Your vote has been cryptographically secured. Keep your receipt to verify your vote was counted.
-                </p>
+
+              {/* Official Ballot Confirmation Slip */}
+              <div id="ballot-slip" ref={slipRef}
+                className="max-w-lg mx-auto border-2 border-primary/40 rounded-2xl overflow-hidden shadow-2xl shadow-primary/10">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-primary to-purple-700 px-6 py-5 text-white">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <ShieldCheck className="w-5 h-5" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Election Commission of India</span>
+                    </div>
+                    <span className="text-xs opacity-70">OFFICIAL DOCUMENT</span>
+                  </div>
+                  <h3 className="text-xl font-extrabold mt-2">Ballot Confirmation Slip</h3>
+                  <p className="text-xs opacity-70 mt-0.5">Retain this slip for vote verification</p>
+                </div>
+
+                {/* Body */}
+                <div className="bg-background px-6 py-6 space-y-4">
+                  {/* Watermark */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center justify-center opacity-[0.04] pointer-events-none select-none">
+                      <span className="text-7xl font-black text-primary rotate-12">ECI</span>
+                    </div>
+
+                    <div className="relative space-y-3">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Election</p>
+                          <p className="font-semibold text-sm leading-tight mt-0.5">
+                            {confirmation?.electionTitle || selectedElection?.title}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold">Type</p>
+                          <p className="font-semibold text-sm mt-0.5">{confirmation?.electionType || selectedElection?.type}</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1"><MapPin className="w-2.5 h-2.5" /> Constituency</p>
+                          <p className="font-semibold text-sm mt-0.5">{confirmation?.constituencyName || constituencyName || 'National'}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1"><Building2 className="w-2.5 h-2.5" /> Polling Booth</p>
+                          <p className="font-semibold text-sm mt-0.5">{confirmation?.boothName || user?.assignedBooth?.name || 'N/A'}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> Timestamp</p>
+                        <p className="font-semibold text-sm mt-0.5">
+                          {new Date(confirmation?.timestamp || Date.now()).toLocaleString('en-IN', { dateStyle: 'full', timeStyle: 'medium' })}
+                        </p>
+                      </div>
+
+                      <div className="pt-2">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold flex items-center gap-1"><ShieldCheck className="w-2.5 h-2.5" /> Cryptographic Receipt Token</p>
+                        <div className="mt-1.5 bg-secondary/30 border border-border rounded-lg p-3">
+                          <p className="font-mono text-xs break-all text-primary font-bold select-all">{receipt}</p>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground mt-1">Use this token at <strong>/verify</strong> to confirm your vote was counted</p>
+                      </div>
+
+                      {/* Secret Ballot Notice */}
+                      <div className="mt-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400 text-xs flex items-start gap-2">
+                        <ShieldCheck className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                        <span>Secret Ballot Protected — This slip intentionally does not reveal your candidate selection. Your vote is anonymized by SHA-256 cryptographic hashing.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="bg-secondary/20 border-t border-border px-6 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs text-green-400">
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                    Vote Verified & Secured
+                  </div>
+                  <span className="text-[10px] text-muted-foreground font-mono">ECI-DIGITAL-{receipt?.substring(0, 8).toUpperCase()}</span>
+                </div>
               </div>
-              <div className="bg-background border border-border p-5 rounded-xl text-left max-w-lg mx-auto">
-                <p className="text-xs text-muted-foreground font-mono mb-2 flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> CRYPTOGRAPHIC RECEIPT TOKEN</p>
-                <p className="font-mono text-sm break-all font-bold text-primary select-all">{receipt}</p>
-                <p className="text-xs text-muted-foreground mt-3">Visit <span className="text-primary">/verify</span> to confirm your vote was counted</p>
+
+              {/* Action buttons */}
+              <div className="flex gap-3 justify-center flex-wrap">
+                <button onClick={handlePrintSlip}
+                  className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl text-sm font-semibold transition-colors shadow-lg shadow-primary/20">
+                  <Printer className="w-4 h-4" /> Print / Save as PDF
+                </button>
+                <button onClick={() => { setSelectedElection(null); setReceipt(''); setConfirmation(null); }}
+                  className="px-5 py-2.5 bg-secondary hover:bg-secondary/80 border border-border rounded-xl text-sm transition-colors">
+                  Back to Elections
+                </button>
               </div>
-              <button onClick={() => { setSelectedElection(null); setReceipt(''); }}
-                className="px-6 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-sm transition-colors">
-                Back to Elections
-              </button>
             </motion.div>
+
           ) : (
-            <motion.div
-              key="voting-interface"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="bg-secondary/10 border border-border rounded-xl p-8"
-            >
+            <motion.div key="voting-interface" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }}
+              className="bg-secondary/10 border border-border rounded-xl p-8">
               <button onClick={() => setSelectedElection(null)}
                 className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 mb-6 transition-colors">
                 ← Back to elections
@@ -249,11 +339,8 @@ const VotingPortal = () => {
                     <p>No candidates found for your constituency in this election.</p>
                   </div>
                 ) : candidates.map((candidate) => (
-                  <div
-                    key={candidate._id}
-                    onClick={() => setSelectedCandidate(candidate._id)}
-                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${selectedCandidate === candidate._id ? 'border-primary bg-primary/10' : 'border-border bg-background hover:border-primary/40'}`}
-                  >
+                  <div key={candidate._id} onClick={() => setSelectedCandidate(candidate._id)}
+                    className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex items-center justify-between ${selectedCandidate === candidate._id ? 'border-primary bg-primary/10' : 'border-border bg-background hover:border-primary/40'}`}>
                     <div>
                       <h4 className="font-bold text-base">{candidate.name}</h4>
                       <p className="text-sm text-muted-foreground">{candidate.party}</p>
@@ -268,13 +355,10 @@ const VotingPortal = () => {
                 ))}
               </div>
 
-              <motion.button
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
+              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
                 onClick={handleVote}
                 disabled={!selectedCandidate || statusMsg.type === 'success'}
-                className="w-full h-13 bg-primary text-primary-foreground font-bold py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
-              >
+                className="w-full h-13 bg-primary text-primary-foreground font-bold py-3 rounded-xl disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all">
                 <Vote className="h-5 w-5" />
                 Cast My Secure Ballot
               </motion.button>

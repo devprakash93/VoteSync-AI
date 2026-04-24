@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 export const AuthContext = createContext();
 
@@ -12,11 +12,10 @@ export const AuthProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const config = { headers: { Authorization: `Bearer ${token}` } };
-          const { data } = await axios.get('http://localhost:5000/api/auth/profile', config);
+          const { data } = await api.get('/api/auth/profile');
           setUser(data);
         } catch (error) {
-          console.error('Error fetching user', error);
+          console.error('Session expired or invalid token:', error.message);
           localStorage.removeItem('token');
         }
       }
@@ -27,27 +26,27 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const { data } = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const { data } = await api.post('/api/auth/login', { email, password });
       localStorage.setItem('token', data.token);
       setUser(data);
-      return { success: true };
+      return { success: true, role: data.role };
     } catch (error) {
-      return { success: false, message: error.response?.data?.message || 'Login failed' };
+      return { success: false, message: error.response?.data?.message || 'Login failed. Please try again.' };
     }
   };
 
   const register = async (name, email, password, role, organization, constituencyId) => {
     try {
-      const { data } = await axios.post('http://localhost:5000/api/auth/register', {
+      const { data } = await api.post('/api/auth/register', {
         name, email, password, role,
         organization: organization || 'Government',
-        constituencyId: constituencyId || null
+        constituencyId: constituencyId || null,
       });
       localStorage.setItem('token', data.token);
       setUser(data);
-      return { success: true };
+      return { success: true, role: data.role };
     } catch (error) {
-      return { success: false, message: error.response?.data?.message || 'Registration failed' };
+      return { success: false, message: error.response?.data?.message || 'Registration failed.' };
     }
   };
 
